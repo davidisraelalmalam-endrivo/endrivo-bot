@@ -7,12 +7,28 @@ app.use(express.json());
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
+let WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const SHOPIFY_STORE = process.env.SHOPIFY_STORE;
 const SHOPIFY_TOKEN = process.env.SHOPIFY_TOKEN;
 const OWNER_PHONE = '972533940242';
+const APP_ID = process.env.APP_ID;
+const APP_SECRET = process.env.APP_SECRET;
+
+async function refreshToken() {
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${WHATSAPP_TOKEN}`
+    );
+    WHATSAPP_TOKEN = response.data.access_token;
+    console.log('Token refreshed successfully');
+  } catch (error) {
+    console.error('Token refresh failed:', error.message);
+  }
+}
+
+setInterval(refreshToken, 23 * 60 * 60 * 1000);
 
 const conversations = new Map();
 
@@ -139,7 +155,6 @@ async function handleMessage(from, text, type) {
   await sendMessage(from, reply);
 }
 
-// Webhook verification
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
@@ -152,7 +167,6 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-// Receive messages
 app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
 
